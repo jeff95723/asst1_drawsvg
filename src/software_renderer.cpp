@@ -16,6 +16,8 @@ namespace CMU462 {
     int getOctant(int dx, int dy);
     void switchFromOctantZeroTo(int octant, int &x, int &y);
     void switchToOctantZeroFrom(int octant, int &x, int &y);
+    int inTriangle(Vector2D T0, Vector2D T1, Vector2D T2, Vector2D test);
+    float ETest(Vector2D T1, Vector2D T2, Vector2D test);
 
     void SoftwareRendererImp::draw_svg(SVG& svg) {
 
@@ -318,7 +320,35 @@ namespace CMU462 {
             float y1, float x2, float y2, Color color) {
         // Task 2: 
         // Implement triangle rasterization
+        Vector2D T0, T1, T2;
+        if (x0 < x1) {
+            T0 = Vector2D(x0, y0);
+            T1 = Vector2D(x1, y1);
+        } else {
+            T0 = Vector2D(x1, y1);
+            T1 = Vector2D(x0, y0);
+        }
 
+        T2 = Vector2D(x2, y2);
+        if (ETest(T0, T1, T2) > 0) {
+            T2 = T1;
+            T1 = Vector2D(x2, y2);
+        }
+
+        float tlx, tly, brx, bry;
+        int x, y;
+        tlx = min(min(x0, x1), x2);
+        tly = min(min(y0, y1), y2);
+        brx = max(max(x0, x1), x2);
+        bry = max(max(y0, y1), y2);
+
+        for (y = floor(tly); y < ceil(bry); y++) {
+            for (x = floor(tlx); x < ceil(brx); x++) {
+                if (inTriangle(T0, T1, T2, Vector2D(x, y))) {
+                    rasterize_point(x + 0.5, y + 0.5, color);
+                }
+            }
+        }
     }
 
     void SoftwareRendererImp::rasterize_image(float x0, float y0, float x1,
@@ -343,4 +373,21 @@ namespace CMU462 {
         y = x;
         x = tmp;
     }
+
+    float ETest(Vector2D T1, Vector2D T2, Vector2D test) {
+        Vector2D dP = T2 - T1;
+
+        Vector2D dTest = T1 - test;   // Offset vector from test pointing to T1.
+
+        // Computes the 2D perpendicular direction.
+        Vector2D dP_perp = Vector2D(dP.y, -dP.x);
+
+        return dot(dTest, dP_perp);
+    }
+
+    int inTriangle(Vector2D T0, Vector2D T1, Vector2D T2, Vector2D test) {
+        return ((ETest(T0, T1, test) <= 0) && (ETest(T1, T2, test) <= 0)
+                && (ETest(T2, T0, test) <= 0));
+    }
+
 } // namespace CMU462
