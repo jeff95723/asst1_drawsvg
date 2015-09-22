@@ -20,6 +20,7 @@ namespace CMU462 {
     float ETest(Vector2D T1, Vector2D T2, Vector2D test);
 
     void SoftwareRendererImp::draw_svg(SVG& svg) {
+        // Clear up target
         clear_target();
 
         // set top level transformation
@@ -94,8 +95,10 @@ namespace CMU462 {
 
     void SoftwareRendererImp::draw_element(SVGElement* element) {
 
-        // Task 4 (part 1):
-        // Modify this to implement the transformation stack
+        // Save prev transformation
+        Matrix3x3 prev_trans= transformation;
+        // Update current transformation
+        transformation = transformation * element->transform;
 
         switch (element->type) {
             case POINT:
@@ -125,7 +128,8 @@ namespace CMU462 {
             default:
                 break;
         }
-
+        // restore previous transformation
+        transformation = prev_trans;
     }
 
 // Primitive Drawing //
