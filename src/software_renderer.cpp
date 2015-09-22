@@ -287,11 +287,30 @@ namespace CMU462 {
               g = color.g,
               b = color.b,
               a = color.a;
+        float cr, cg, cb, ca;
+        float cr_after, cg_after, cb_after, ca_after;
 
         int sx = (int) floor(x),
             sy = (int) floor(y);
 
         int index = 4 * (sx + sy * supersample_target_w);
+
+        // get canvas colors
+        cr = (supersample_target[index]) / 255.0;
+        cg = (supersample_target[index + 1]) / 255.0;
+        cb = (supersample_target[index + 2]) / 255.0;
+        ca = (supersample_target[index + 3]) / 255.0;
+
+        // computing alpha composition
+        ca_after = a + ca - a * ca;
+        if (ca_after == 0) {
+            cr_after = cg_after = cb_after = 0;
+        } else {
+            cr_after = (r * a + cr * ca * (1 - a)) / ca_after;
+            cg_after = (g * a + cg * ca * (1 - a)) / ca_after;
+            cb_after = (b * a + cb * ca * (1 - a)) / ca_after;
+        }
+
 
         supersample_target[index]     = (uint8_t) (r * 255);
         supersample_target[index + 1] = (uint8_t) (g * 255);
@@ -367,6 +386,8 @@ namespace CMU462 {
             float y1, float x2, float y2, Color color) {
         // Task 2:
         // Implement triangle rasterization
+
+        // Swap to counter clockwise
         Vector2D T0, T1, T2;
         if (x0 < x1) {
             T0 = Vector2D(x0, y0);
@@ -395,10 +416,10 @@ namespace CMU462 {
         for (y = floor(tly); y < ceil(bry); y++) {
             for (x = floor(tlx); x < ceil(brx); x++) {
                 // Go through all super sampling points
-                for (int i = 0; i < sample_rate; i++) {
-                    for (int j = 0; j < sample_rate; j++) {
+                for (i = 0; i < sample_rate; i++) {
+                    for (j = 0; j < sample_rate; j++) {
                         sx = x + (i * d) + (d / 2);
-                        sy = y + (i * d) + (d / 2);
+                        sy = y + (j * d) + (d / 2);
                         if (inTriangle(T0, T1, T2, Vector2D(sx, sy))) {
                             super_sample_rasterize_point(sample_rate * sx,
                                                          sample_rate * sy, color);
@@ -418,10 +439,6 @@ namespace CMU462 {
 
 // resolve samples to render target
     void SoftwareRendererImp::resolve(void) {
-
-        // Task 3:
-        // Implement supersampling
-        // You may also need to modify other functions marked with "Task 3".
         int x, y, sx, sy;
         int i, j, index;
         int divider = sample_rate * sample_rate;
