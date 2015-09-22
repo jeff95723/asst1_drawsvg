@@ -20,6 +20,7 @@ namespace CMU462 {
     float ETest(Vector2D T1, Vector2D T2, Vector2D test);
 
     void SoftwareRendererImp::draw_svg(SVG& svg) {
+        clear_target();
 
         // set top level transformation
         transformation = canvas_to_screen;
@@ -55,20 +56,39 @@ namespace CMU462 {
 
     void SoftwareRendererImp::set_sample_rate(size_t sample_rate) {
 
-        // Task 3: 
+        // Task 3:
         // You may want to modify this for supersampling support
         this->sample_rate = sample_rate;
+
+        // Set up SSAA render target
+        this->supersample_target_w = target_w * sample_rate;
+        this->supersample_target_h = target_h * sample_rate;
+
+        // Create super sample render target
+        this->supersample_target =
+            std::vector<unsigned char>(4 * supersample_target_w
+                                    * supersample_target_h, 255);
+
 
     }
 
     void SoftwareRendererImp::set_render_target(unsigned char* render_target,
             size_t width, size_t height) {
 
-        // Task 3: 
+        // Task 3:
         // You may want to modify this for supersampling support
         this->render_target = render_target;
         this->target_w = width;
         this->target_h = height;
+
+        // Set up SSAA render target
+        this->supersample_target_w = width  * sample_rate;
+        this->supersample_target_h = height * sample_rate;
+
+        // Create super sample render target
+        this->supersample_target =
+            std::vector<unsigned char>(4 * supersample_target_w
+                                    * supersample_target_h, 255);
 
     }
 
@@ -207,7 +227,7 @@ namespace CMU462 {
 
     void SoftwareRendererImp::draw_ellipse(Ellipse& ellipse) {
 
-        // Extra credit 
+        // Extra credit
 
     }
 
@@ -244,12 +264,39 @@ namespace CMU462 {
         if (sy < 0 || sy >= target_h)
             return;
 
-        // fill sample - NOT doing alpha blending!
-        render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
-        render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
-        render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
-        render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+        int dx, dy, ssx, ssy;
+        for (dx = 0; dx < sample_rate; dx++) {
+            for (dy = 0; dy < sample_rate; dy++) {
+                ssx = sample_rate * sx + dx;
+                ssy = sample_rate * sy + dy;
+                super_sample_rasterize_point(ssx, ssy, color);
+            }
+        }
 
+        // // fill sample - NOT doing alpha blending!
+        // render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
+        // render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
+        // render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
+        // render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
+
+    }
+
+    void SoftwareRendererImp::super_sample_rasterize_point(float x,
+            float y, Color color) {
+        float r = color.r,
+              g = color.g,
+              b = color.b,
+              a = color.a;
+
+        int sx = (int) floor(x),
+            sy = (int) floor(y);
+
+        int index = 4 * (sx + sy * supersample_target_w);
+
+        supersample_target[index]     = (uint8_t) (r * 255);
+        supersample_target[index + 1] = (uint8_t) (g * 255);
+        supersample_target[index + 2] = (uint8_t) (b * 255);
+        supersample_target[index + 3] = (uint8_t) (a * 255);
     }
 
     void SoftwareRendererImp::rasterize_line(float x0, float y0, float x1,
@@ -318,7 +365,7 @@ namespace CMU462 {
 
     void SoftwareRendererImp::rasterize_triangle(float x0, float y0, float x1,
             float y1, float x2, float y2, Color color) {
-        // Task 2: 
+        // Task 2:
         // Implement triangle rasterization
         Vector2D T0, T1, T2;
         if (x0 < x1) {
@@ -336,6 +383,9 @@ namespace CMU462 {
         }
 
         float tlx, tly, brx, bry;
+        float d = 1.0 / sample_rate;
+        float sx, sy;
+        int i, j;
         int x, y;
         tlx = min(min(x0, x1), x2);
         tly = min(min(y0, y1), y2);
@@ -344,8 +394,16 @@ namespace CMU462 {
 
         for (y = floor(tly); y < ceil(bry); y++) {
             for (x = floor(tlx); x < ceil(brx); x++) {
-                if (inTriangle(T0, T1, T2, Vector2D(x, y))) {
-                    rasterize_point(x + 0.5, y + 0.5, color);
+                // Go through all super sampling points
+                for (int i = 0; i < sample_rate; i++) {
+                    for (int j = 0; j < sample_rate; j++) {
+                        sx = x + (i * d) + (d / 2);
+                        sy = y + (i * d) + (d / 2);
+                        if (inTriangle(T0, T1, T2, Vector2D(sx, sy))) {
+                            super_sample_rasterize_point(sample_rate * sx,
+                                                         sample_rate * sy, color);
+                        }
+                    }
                 }
             }
         }
@@ -353,7 +411,7 @@ namespace CMU462 {
 
     void SoftwareRendererImp::rasterize_image(float x0, float y0, float x1,
             float y1, Texture& tex) {
-        // Task ?: 
+        // Task ?:
         // Implement image rasterization
 
     }
@@ -361,9 +419,42 @@ namespace CMU462 {
 // resolve samples to render target
     void SoftwareRendererImp::resolve(void) {
 
-        // Task 3: 
+        // Task 3:
         // Implement supersampling
         // You may also need to modify other functions marked with "Task 3".
+        int x, y, sx, sy;
+        int i, j, index;
+        int divider = sample_rate * sample_rate;
+        float r,g,b,a;
+
+        for (x = 0; x < target_w; x++) {
+            for (y = 0; y < target_h; y++) {
+                // Re-init the color values
+                r = 0;
+                g = 0;
+                b = 0;
+                a = 0;
+                for (i = 0; i < sample_rate; i++) {
+                    for (j = 0; j < sample_rate; j++) {
+                        sx = sample_rate * x + i;
+                        sy = sample_rate * y + j;
+                        index = 4 * (sx + sy * supersample_target_w);
+                        r += supersample_target[index] / 255.0;
+                        g += supersample_target[index + 1] / 255.0;
+                        b += supersample_target[index + 2] / 255.0;
+                        a += supersample_target[index + 3] / 255.0;
+                    }
+                }
+
+                // Take the average and write to the render target
+                index = 4 * (x + y * target_w);
+                render_target[index]     = (uint8_t) ((r / divider) * 255);
+                render_target[index + 1] = (uint8_t) ((g / divider) * 255);
+                render_target[index + 2] = (uint8_t) ((b / divider) * 255);
+                render_target[index + 3] = (uint8_t) ((a / divider) * 255);
+            }
+        }
+
         return;
 
     }
