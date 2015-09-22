@@ -79,8 +79,8 @@ class SoftwareRendererImp : public SoftwareRenderer {
                           size_t width, size_t height );
   void clear_target() {
       SoftwareRenderer::clear_target();
-      this->supersample_target = std::vector<unsigned>(4 * supersample_target_w
-              * supersample_target_h, 255)
+      supersample_target = std::vector<unsigned char>(4 * supersample_target_w
+              * supersample_target_h, 255);
   }
 
  private:
