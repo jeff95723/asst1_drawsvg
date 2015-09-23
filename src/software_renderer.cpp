@@ -12,11 +12,17 @@ using namespace std;
 namespace CMU462 {
 
 // Implements SoftwareRenderer //
+    /* Takes two floats and swap the value of them */
     void swapVal(float &x, float &y);
-    int getOctant(int dx, int dy);
-    void switchFromOctantZeroTo(int octant, int &x, int &y);
-    void switchToOctantZeroFrom(int octant, int &x, int &y);
+
+    /* Checks if the given test point is in the triangle with
+     * the endpoints of T0 T1 T2.
+     */
     int inTriangle(Vector2D T0, Vector2D T1, Vector2D T2, Vector2D test);
+
+    /* Checks if the test point is in the edge with the end points
+     * T1 T2.
+     */
     float ETest(Vector2D T1, Vector2D T2, Vector2D test);
 
     void SoftwareRendererImp::draw_svg(SVG& svg) {
@@ -273,15 +279,11 @@ namespace CMU462 {
                 super_sample_rasterize_point(ssx, ssy, color);
             }
         }
-
-        // // fill sample - NOT doing alpha blending!
-        // render_target[4 * (sx + sy * target_w)] = (uint8_t)(color.r * 255);
-        // render_target[4 * (sx + sy * target_w) + 1] = (uint8_t)(color.g * 255);
-        // render_target[4 * (sx + sy * target_w) + 2] = (uint8_t)(color.b * 255);
-        // render_target[4 * (sx + sy * target_w) + 3] = (uint8_t)(color.a * 255);
-
     }
 
+    /* Writes the point x, y in the super sample render target with
+     * color color.
+     */
     void SoftwareRendererImp::super_sample_rasterize_point(float x, float y,
             Color color) {
         float r = color.r, g = color.g, b = color.b, a = color.a;
@@ -374,6 +376,7 @@ namespace CMU462 {
                 }
             }
         } else {
+            // Horizontal line
             for (x = x0; x <= x1; x++) {
                 rasterize_point(x, y0, color);
             }
@@ -382,9 +385,6 @@ namespace CMU462 {
 
     void SoftwareRendererImp::rasterize_triangle(float x0, float y0, float x1,
             float y1, float x2, float y2, Color color) {
-        // Task 2:
-        // Implement triangle rasterization
-
         // Swap to counter clockwise
         Vector2D T0, T1, T2;
         if (x0 < x1) {

@@ -127,7 +127,7 @@ namespace CMU462 {
                 return mip.texels[index];
             } else {
                 // the right column is out of bounds
-                /*  *|
+                /*  *|*
                  * -----
                  *   |
                  */
@@ -136,26 +136,15 @@ namespace CMU462 {
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
                         * v_opposite;
 
-                /*   |*
-                 * -----
-                 *   |
-                 */
-                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
-                        * v_opposite;
-
                 /*   |
                  * -----
-                 *  *|
+                 *  *|*
                  */
                 index = 4 * (x + (y + 1) * mip.width);
                 uint8_to_float(buf, &mip.texels[index]);
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
                         * v_ratio;
 
-                /*   |
-                 * -----
-                 *   |*
-                 */
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
                         * v_ratio;
             }
@@ -164,32 +153,25 @@ namespace CMU462 {
             if (y + 1 > mip.height) {
                 /*  *|
                  * -----
-                 *   |
+                 *  *|
                  */
                 index = 4 * (x + y * mip.width);
                 uint8_to_float(buf, &mip.texels[index]);
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
                         * v_opposite;
-                /*   |
-                 * -----
-                 *  *|
-                 */
+
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
                         * v_ratio;
 
                 /*   |*
                  * -----
-                 *   |
+                 *   |*
                  */
                 index = 4 * (x + 1 + y * mip.width);
                 uint8_to_float(buf, &mip.texels[index]);
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
                         * v_opposite;
 
-                /*   |
-                 * -----
-                 *   |*
-                 */
                 color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
                         * v_ratio;
 
@@ -249,6 +231,7 @@ namespace CMU462 {
         int hi_level = ceil(level);
         float dlevel = level - lo_level;
 
+        // Calculate the colors using bilinear
         Color lo_color = sample_bilinear(tex, u, v, lo_level);
         Color hi_color = sample_bilinear(tex, u, v, hi_level);
 
