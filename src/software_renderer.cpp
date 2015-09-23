@@ -66,10 +66,8 @@ namespace CMU462 {
         this->supersample_target_h = target_h * sample_rate;
 
         // Create super sample render target
-        this->supersample_target =
-            std::vector<unsigned char>(4 * supersample_target_w
-                                    * supersample_target_h, 255);
-
+        this->supersample_target = std::vector<unsigned char>(
+                4 * supersample_target_w * supersample_target_h, 255);
 
     }
 
@@ -83,20 +81,19 @@ namespace CMU462 {
         this->target_h = height;
 
         // Set up SSAA render target
-        this->supersample_target_w = width  * sample_rate;
+        this->supersample_target_w = width * sample_rate;
         this->supersample_target_h = height * sample_rate;
 
         // Create super sample render target
-        this->supersample_target =
-            std::vector<unsigned char>(4 * supersample_target_w
-                                    * supersample_target_h, 255);
+        this->supersample_target = std::vector<unsigned char>(
+                4 * supersample_target_w * supersample_target_h, 255);
 
     }
 
     void SoftwareRendererImp::draw_element(SVGElement* element) {
 
         // Save prev transformation
-        Matrix3x3 prev_trans= transformation;
+        Matrix3x3 prev_trans = transformation;
         // Update current transformation
         transformation = transformation * element->transform;
 
@@ -285,41 +282,38 @@ namespace CMU462 {
 
     }
 
-    void SoftwareRendererImp::super_sample_rasterize_point(float x,
-            float y, Color color) {
-        float r = color.r,
-              g = color.g,
-              b = color.b,
-              a = color.a;
-        float cr, cg, cb, ca;
-        float cr_after, cg_after, cb_after, ca_after;
+    void SoftwareRendererImp::super_sample_rasterize_point(float x, float y,
+            Color color) {
+        float r = color.r, g = color.g, b = color.b, a = color.a;
+        float canvas_r, canvas_g, canvas_b, canvas_a;
+        float r_after, g_after, b_after, a_after;
 
-        int sx = (int) floor(x),
-            sy = (int) floor(y);
+        int sx = (int) floor(x), sy = (int) floor(y);
 
         int index = 4 * (sx + sy * supersample_target_w);
 
-        // get canvas colors
-        cr = (supersample_target[index]) / 255.0;
-        cg = (supersample_target[index + 1]) / 255.0;
-        cb = (supersample_target[index + 2]) / 255.0;
-        ca = (supersample_target[index + 3]) / 255.0;
+        // get canvas previous colors
+        canvas_r = (supersample_target[index]) / 255.0;
+        canvas_g = (supersample_target[index + 1]) / 255.0;
+        canvas_b = (supersample_target[index + 2]) / 255.0;
+        canvas_a = (supersample_target[index + 3]) / 255.0;
 
         // computing alpha composition
-        ca_after = a + ca - a * ca;
-        if (ca_after == 0) {
-            cr_after = cg_after = cb_after = 0;
+        a_after = a + canvas_a - a * canvas_a;
+        if (a_after == 0) {
+            r_after = 0;
+            g_after = 0;
+            b_after = 0;
         } else {
-            cr_after = (r * a + cr * ca * (1 - a)) / ca_after;
-            cg_after = (g * a + cg * ca * (1 - a)) / ca_after;
-            cb_after = (b * a + cb * ca * (1 - a)) / ca_after;
+            r_after = (r * a + canvas_r * canvas_a * (1 - a)) / a_after;
+            g_after = (g * a + canvas_g * canvas_a * (1 - a)) / a_after;
+            b_after = (b * a + canvas_b * canvas_a * (1 - a)) / a_after;
         }
 
-
-        supersample_target[index]     = (uint8_t) (r * 255);
-        supersample_target[index + 1] = (uint8_t) (g * 255);
-        supersample_target[index + 2] = (uint8_t) (b * 255);
-        supersample_target[index + 3] = (uint8_t) (a * 255);
+        supersample_target[index] = (uint8_t)(r_after * 255);
+        supersample_target[index + 1] = (uint8_t)(g_after * 255);
+        supersample_target[index + 2] = (uint8_t)(b_after * 255);
+        supersample_target[index + 3] = (uint8_t)(a_after * 255);
     }
 
     void SoftwareRendererImp::rasterize_line(float x0, float y0, float x1,
@@ -426,7 +420,7 @@ namespace CMU462 {
                         sy = y + (j * d) + (d / 2);
                         if (inTriangle(T0, T1, T2, Vector2D(sx, sy))) {
                             super_sample_rasterize_point(sample_rate * sx,
-                                                         sample_rate * sy, color);
+                                    sample_rate * sy, color);
                         }
                     }
                 }
@@ -436,8 +430,21 @@ namespace CMU462 {
 
     void SoftwareRendererImp::rasterize_image(float x0, float y0, float x1,
             float y1, Texture& tex) {
-        // Task ?:
-        // Implement image rasterization
+        float x, y, u, v;
+        float u_scale = 1.0 / transformation(0, 0);
+        float v_scale = 1.0 / transformation(1, 1);
+        Color color;
+        for (x = floor(x0); x < ceil(x1); x++) {
+            for (y = floor(y0); y < ceil(y1); y++) {
+                // Get the corresponding point in texture coordinates
+                u = (x + 0.5 - x0) / (x1 - x0);
+                v = (y + 0.5 - y0) / (y1 - y0);
+                color = this->sampler->sample_trilinear(tex, u, v, u_scale,
+                        v_scale);
+
+                rasterize_point(x + 0.5, y + 0.5, color);
+            }
+        }
 
     }
 
@@ -446,7 +453,7 @@ namespace CMU462 {
         int x, y, sx, sy;
         int i, j, index;
         int divider = sample_rate * sample_rate;
-        float r,g,b,a;
+        float r, g, b, a;
 
         for (x = 0; x < target_w; x++) {
             for (y = 0; y < target_h; y++) {
@@ -469,10 +476,10 @@ namespace CMU462 {
 
                 // Take the average and write to the render target
                 index = 4 * (x + y * target_w);
-                render_target[index]     = (uint8_t) ((r / divider) * 255);
-                render_target[index + 1] = (uint8_t) ((g / divider) * 255);
-                render_target[index + 2] = (uint8_t) ((b / divider) * 255);
-                render_target[index + 3] = (uint8_t) ((a / divider) * 255);
+                render_target[index] = (uint8_t)((r / divider) * 255);
+                render_target[index + 1] = (uint8_t)((g / divider) * 255);
+                render_target[index + 2] = (uint8_t)((b / divider) * 255);
+                render_target[index + 3] = (uint8_t)((a / divider) * 255);
             }
         }
 
