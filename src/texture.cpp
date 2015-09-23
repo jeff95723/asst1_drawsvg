@@ -244,8 +244,8 @@ namespace CMU462 {
         int hi_level = ceil(level);
         float dlevel = level - lo_level;
 
-        Color lo_color = sample_bilinear(tex, u, v);
-        Color hi_color = sample_bilinear(tex, u, v);
+        Color lo_color = sample_bilinear(tex, u, v, lo_level);
+        Color hi_color = sample_bilinear(tex, u, v, hi_level);
 
         return lo_color * dlevel + hi_color * (1 - dlevel);
     }
