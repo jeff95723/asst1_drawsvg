@@ -118,38 +118,121 @@ namespace CMU462 {
         float u_opposite = 1 - u_ratio;
         float v_opposite = 1 - v_ratio;
 
-        /*  *|
-         * -----
-         *   |
-         */
-        index = 4 * (x + y * mip.width);
-        uint8_to_float(buf, &mip.texels[index]);
-        color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
-                * v_opposite;
+        if (x + 1 > mip.width) {
+            // out of bounds, check the one below
+            if (y + 1 > mip.height) {
+                // both x and y are out of bounds
+                // use top left color
+                index = 4 * (x + y * mip.width);
+                return mip.texels[index];
+            } else {
+                // the right column is out of bounds
+                /*  *|
+                 * -----
+                 *   |
+                 */
+                index = 4 * (x + y * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
+                        * v_opposite;
 
-        /*   |*
-         * -----
-         *   |
-         */
-        index = 4 * (x + 1 + y * mip.width);
-        uint8_to_float(buf, &mip.texels[index]);
-        color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio * v_opposite;
+                /*   |*
+                 * -----
+                 *   |
+                 */
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
+                        * v_opposite;
 
-        /*   |
-         * -----
-         *  *|
-         */
-        index = 4 * (x + (y + 1) * mip.width);
-        uint8_to_float(buf, &mip.texels[index]);
-        color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite * v_ratio;
+                /*   |
+                 * -----
+                 *  *|
+                 */
+                index = 4 * (x + (y + 1) * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
+                        * v_ratio;
 
-        /*   |
-         * -----
-         *   |*
-         */
-        index = 4 * (x + 1 + (y + 1) * mip.width);
-        uint8_to_float(buf, &mip.texels[index]);
-        color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio * v_ratio;
+                /*   |
+                 * -----
+                 *   |*
+                 */
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
+                        * v_ratio;
+            }
+
+        } else {
+            if (y + 1 > mip.height) {
+                /*  *|
+                 * -----
+                 *   |
+                 */
+                index = 4 * (x + y * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
+                        * v_opposite;
+                /*   |
+                 * -----
+                 *  *|
+                 */
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
+                        * v_ratio;
+
+                /*   |*
+                 * -----
+                 *   |
+                 */
+                index = 4 * (x + 1 + y * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
+                        * v_opposite;
+
+                /*   |
+                 * -----
+                 *   |*
+                 */
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
+                        * v_ratio;
+
+            } else {
+                // No out of bounds
+
+                /*  *|
+                 * -----
+                 *   |
+                 */
+                index = 4 * (x + y * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
+                        * v_opposite;
+
+                /*   |*
+                 * -----
+                 *   |
+                 */
+                index = 4 * (x + 1 + y * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
+                        * v_opposite;
+
+                /*   |
+                 * -----
+                 *  *|
+                 */
+                index = 4 * (x + (y + 1) * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_opposite
+                        * v_ratio;
+
+                /*   |
+                 * -----
+                 *   |*
+                 */
+                index = 4 * (x + 1 + (y + 1) * mip.width);
+                uint8_to_float(buf, &mip.texels[index]);
+                color += Color(buf[0], buf[1], buf[2], buf[3]) * u_ratio
+                        * v_ratio;
+            }
+        }
 
         return color;
     }
