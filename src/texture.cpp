@@ -252,7 +252,7 @@ namespace CMU462 {
         Color lo_color = sample_bilinear(tex, u, v, lo_level);
         Color hi_color = sample_bilinear(tex, u, v, hi_level);
 
-        return lo_color * dlevel + hi_color * (1 - dlevel);
+        return lo_color * (1 - dlevel) + hi_color * dlevel;
     }
 
 } // namespace CMU462
