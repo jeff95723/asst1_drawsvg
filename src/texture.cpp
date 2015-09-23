@@ -240,6 +240,11 @@ namespace CMU462 {
     Color Sampler2DImp::sample_trilinear(Texture& tex, float u, float v,
             float u_scale, float v_scale) {
         float level = log2f(sqrt(u_scale * u_scale + v_scale * v_scale));
+
+        if (level < 0) {
+            return sample_bilinear(tex, u, v, 0);
+        }
+
         int lo_level = floor(level);
         int hi_level = ceil(level);
         float dlevel = level - lo_level;
